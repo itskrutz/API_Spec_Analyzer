@@ -1,0 +1,46 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# API Security Analyzer  |  docker-compose.yml
+#
+# Usage:
+#   docker compose up --build      # first run (builds image)
+#   docker compose up              # subsequent runs
+#   docker compose down            # stop and remove containers
+#
+# The app will be available at http://localhost:8000
+#
+# AI enrichment (Improvement 4):
+#   Set OPENAI_API_KEY in your shell before running docker compose:
+#       export OPENAI_API_KEY=sk-...
+#       docker compose up
+#   The variable is forwarded from the host environment into the container.
+#   If not set, ?ai=true requests will return a 503 with a clear error.
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+
+services:
+  api-analyzer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-analyzer
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      # AI enrichment key — read from host environment, never hard-coded here
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+
+    # Mount source for hot-reload during development (comment out for production)
+    volumes:
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+    # Development: auto-reload on code changes
+    command: >
+      uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

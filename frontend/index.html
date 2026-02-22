@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Security Analyzer</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡</text></svg>" />
+</head>
+
+<body>
+
+  <!-- ═══════════════════════════════════ HEADER ═══════════════════════════════ -->
+  <header>
+    <div class="container header-inner">
+      <div class="logo">
+        <div class="logo-icon">🛡</div>
+        <h1>API <span>Analyzer</span></h1>
+      </div>
+      <span class="tagline">OpenAPI Security Auditor · 10 security rules · Instant report</span>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════ MAIN ════════════════════════════════ -->
+  <main>
+    <div class="container">
+
+      <!-- Input card -->
+      <div class="input-card">
+        <p class="section-title">Paste, upload, or fetch your OpenAPI / Swagger spec</p>
+
+        <!-- Tabs -->
+        <div class="tabs" role="tablist">
+          <button class="tab-btn active" role="tab" data-tab="paste">
+            ✏️ &nbsp;Paste
+          </button>
+          <button class="tab-btn" role="tab" data-tab="upload">
+            📁 &nbsp;Upload File
+          </button>
+          <button class="tab-btn" role="tab" data-tab="url">
+            🌐 &nbsp;From URL
+          </button>
+        </div>
+
+        <!-- Tab: Paste -->
+        <div id="panel-paste" class="tab-panel active">
+          <textarea id="spec-text" placeholder="Paste your OpenAPI 3.x or Swagger 2.0 spec here (JSON or YAML)…
+
+Example:
+openapi: '3.0.0'
+info:
+  title: My API
+  version: '1.0'
+paths:
+  /users:
+    get:
+      summary: List users
+      responses:
+        '200':
+          description: OK"></textarea>
+        </div>
+
+        <!-- Tab: Upload -->
+        <div id="panel-upload" class="tab-panel">
+          <div class="drop-zone" id="drop-zone">
+            <div class="dz-icon">📂</div>
+            <p>Drag &amp; drop a <strong>.json</strong> or <strong>.yaml</strong> file here<br>or <strong>click to
+                browse</strong></p>
+            <p id="file-name"></p>
+          </div>
+          <input type="file" id="file-input" accept=".json,.yaml,.yml,application/json,text/yaml" />
+        </div>
+
+        <!-- Tab: URL -->
+        <div id="panel-url" class="tab-panel">
+          <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:12px;">
+            Provide a publicly accessible URL that returns a raw OpenAPI/Swagger spec.
+          </p>
+          <div class="url-row">
+            <input type="url" id="spec-url" class="url-input" placeholder="https://api.example.com/openapi.json" />
+          </div>
+        </div>
+
+        <!-- AI toggle -->
+        <div class="ai-toggle-row">
+          <label class="ai-toggle-label" for="ai-toggle">
+            <span class="ai-toggle-track">
+              <input type="checkbox" id="ai-toggle" />
+              <span class="ai-toggle-thumb"></span>
+            </span>
+            <span class="ai-toggle-text">
+              AI-powered recommendations
+              <span class="ai-badge">GPT-4o mini</span>
+            </span>
+          </label>
+          <span class="ai-hint">Uses GPT-4o mini to generate context-specific fix guidance · adds a few seconds</span>
+        </div>
+
+        <!-- Analyze row -->
+        <div class="analyze-row">
+          <span class="analyze-hint">Supports OpenAPI 3.x &amp; Swagger 2.0 · JSON or YAML</span>
+          <button id="analyze-btn" class="btn-primary">
+            <span class="spinner" id="spinner"></span>
+            <span id="btn-text">⚡ Analyze Spec</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Error banner -->
+      <div id="error-banner" role="alert"></div>
+
+      <!-- ════════════════════ RESULTS ════════════════════ -->
+      <div id="results">
+
+        <!-- Summary -->
+        <div class="summary-grid">
+          <!-- Score circle -->
+          <div class="score-circle-wrap">
+            <div class="score-circle" id="score-circle">
+              <span class="score-num" id="score-num">—</span>
+              <span class="score-label">score</span>
+            </div>
+            <div class="grade-badge" id="grade-badge">—</div>
+            <div class="score-meta" id="score-meta" style="display:none">
+              <span class="score-meta-item"><strong id="violated-rules-num">—</strong> / 10 rules</span>
+              <span class="score-meta-sep">·</span>
+              <span class="score-meta-item"><strong id="total-occ-num">—</strong> occurrences</span>
+            </div>
+          </div>
+
+          <!-- Meta + severity chips -->
+          <div class="meta-panel">
+            <div class="api-info" id="api-info">
+              <strong id="api-title">—</strong>
+              &nbsp;·&nbsp;
+              <span id="api-version">—</span>
+              &nbsp;·&nbsp;
+              <span id="spec-version" style="color:var(--text-muted)">—</span>
+            </div>
+
+            <div class="severity-row">
+              <div class="sev-chip" data-sev="critical">
+                <div class="dot"></div>
+                <span>Critical</span>
+                <span class="count" id="cnt-critical">0</span>
+              </div>
+              <div class="sev-chip" data-sev="high">
+                <div class="dot"></div>
+                <span>High</span>
+                <span class="count" id="cnt-high">0</span>
+              </div>
+              <div class="sev-chip" data-sev="medium">
+                <div class="dot"></div>
+                <span>Medium</span>
+                <span class="count" id="cnt-medium">0</span>
+              </div>
+              <div class="sev-chip" data-sev="low">
+                <div class="dot"></div>
+                <span>Low</span>
+                <span class="count" id="cnt-low">0</span>
+              </div>
+            </div>
+
+            <div class="findings-summary">
+              <span id="total-findings">0</span> total occurrences across
+              <span id="violated-rules-summary">0</span> violated rules
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar">
+          <span class="filter-label">Filter:</span>
+          <button class="filter-btn active-filter" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="critical">Critical</button>
+          <button class="filter-btn" data-filter="high">High</button>
+          <button class="filter-btn" data-filter="medium">Medium</button>
+          <button class="filter-btn" data-filter="low">Low</button>
+          <button class="filter-btn" data-filter="info">Info</button>
+        </div>
+
+        <!-- Export row (shown after first analysis) -->
+        <div class="export-row" id="export-row">
+          <span class="export-label">Export report:</span>
+          <button class="btn-export" onclick="exportReport('json')" title="Download raw JSON result">
+            { } JSON
+          </button>
+          <button class="btn-export" onclick="exportReport('csv')" title="Download CSV findings table">
+            ⊞ CSV
+          </button>
+          <button class="btn-export" onclick="exportReport('pdf')" title="Download PDF report">
+            📄 PDF
+          </button>
+        </div>
+
+        <!-- Findings list -->
+        <div class="findings-list" id="findings-list">
+          <!-- Populated by JS -->
+        </div>
+
+      </div><!-- /results -->
+
+    </div><!-- /container -->
+  </main>
+
+  <!-- ════════════════════════════════════ FOOTER ══════════════════════════════ -->
+  <footer>
+    <div class="container">
+      API Security Analyzer ·
+      Rules based on <a href="https://owasp.org/API-Security/" target="_blank" rel="noopener">OWASP API Security Top
+        10</a>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
