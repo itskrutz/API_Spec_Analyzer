@@ -1,20 +1,3 @@
-"""
-Rule Engine — Strategy Pattern implementation.
-
-Each security rule lives in its own module (sec001.py … sec010.py) and exposes
-a single `check(spec) -> List[Finding]` function.  The engine runs them all,
-collects individual Finding objects, then groups them by rule before scoring.
-
-Scoring model
-─────────────
-Each of the 10 rules has a fixed point weight (RULE_WEIGHTS, total = 100).
-A rule is either "violated" or "not violated" — its full weight is deducted
-exactly once regardless of how many occurrences were found in the spec.
-
-This prevents large APIs from scoring zero just because a single rule fires
-on dozens of endpoints.  GitHub's API having 50 unauthenticated endpoints
-is the same rule violation as a tiny API having 1 — both lose the same 18 pts.
-"""
 
 from __future__ import annotations
 
@@ -55,22 +38,17 @@ RULES = [
 # CRITICAL=18 pts, HIGH=12 pts, MEDIUM=6 pts, LOW=4 pts.
 
 RULE_WEIGHTS: dict[str, int] = {
-    "SEC001": 12,   # HIGH     — Missing Security Scheme Definitions
-    "SEC002": 18,   # CRITICAL — Unprotected API Endpoints
-    "SEC003": 18,   # CRITICAL — HTTP (Non-HTTPS) Transport Allowed
-    "SEC004":  6,   # MEDIUM   — Missing Authentication Error Responses
-    "SEC005": 12,   # HIGH     — Sensitive Data in Query Parameters
-    "SEC006":  6,   # MEDIUM   — No Rate Limiting Response Defined
-    "SEC007":  6,   # MEDIUM   — OAuth2 Flows with Missing or Empty Scopes
-    "SEC008":  6,   # MEDIUM   — Missing Input Validation Constraints
-    "SEC009":  4,   # LOW      — Unconstrained Server URL Variables
-    "SEC010": 12,   # HIGH     — Weak or Insecure Authentication Scheme
+    "SEC001": 12,   
+    "SEC002": 18,   
+    "SEC003": 18,   
+    "SEC004":  6,  
+    "SEC005": 12,  
+    "SEC006":  6,   
+    "SEC007":  6,   
+    "SEC008":  6,   
+    "SEC009":  4,   
+    "SEC010": 12,   
 }
-# Sum: 12+18+18+6+12+6+6+6+4+12 = 100
-
-# ── Generic Rule Descriptions ─────────────────────────────────────────────────
-# Shown at the group level in the API response — more readable than
-# location-specific descriptions from individual findings.
 
 RULE_DESCRIPTIONS: dict[str, str] = {
     "SEC001": (
@@ -115,7 +93,6 @@ RULE_DESCRIPTIONS: dict[str, str] = {
     ),
 }
 
-# Severity sort order
 _SEV_ORDER: dict[Severity, int] = {
     Severity.CRITICAL: 0,
     Severity.HIGH:     1,
@@ -128,12 +105,6 @@ _SEV_ORDER: dict[Severity, int] = {
 # ── Core Engine Execution ─────────────────────────────────────────────────────
 
 def run_all_rules(spec: dict) -> List[Finding]:
-    """
-    Execute every rule against *spec* and return the aggregated findings.
-
-    A rule that raises an exception is caught; an INFO finding is emitted so
-    analysis continues and the analyst is notified.
-    """
     all_findings: List[Finding] = []
 
     for rule in RULES:
@@ -247,14 +218,7 @@ def build_severity_breakdown(groups: List[FindingGroup]) -> SeverityBreakdown:
 # ── Main Analysis Entry ───────────────────────────────────────────────────────
 
 def analyze(spec: dict) -> AnalysisResult:
-    """
-    Full analysis pipeline:
 
-    1. Run all rules → List[Finding] (individual occurrences).
-    2. Group findings by rule → List[FindingGroup].
-    3. Score based on violated rules (not occurrence count).
-    4. Return a structured AnalysisResult ready for JSON serialisation.
-    """
     findings  = run_all_rules(spec)
     groups    = group_findings(findings)
     score     = compute_score(groups)

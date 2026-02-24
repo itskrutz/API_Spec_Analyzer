@@ -13,35 +13,14 @@ Finally, it can return results as JSON, CSV, or a PDF report format.
 """
 
 from __future__ import annotations
-
 import logging
 import os
-
-# httpx is used here as an asynchronous HTTP client to fetch OpenAPI 
-# spec files directly from public URLs provided by the user.
 import httpx
-
-# FastAPI is the core web framework we use. It's incredibly fast, modern, and 
-# natively supports asynchronous Python, which works great with I/O tasks like API calls.
-# We also import File, UploadFile for handling file uploads, 
-# Query for URL parameter validation, and HTTPException for error responses.
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
-
-# CORSMiddleware is used to handle Cross-Origin Resource Sharing. 
-# This tells the browser that our frontend (running perhaps on a different port) 
-# is allowed to communicate with this backend without being blocked.
 from fastapi.middleware.cors import CORSMiddleware
-
 from fastapi.responses import FileResponse, Response
-
-# StaticFiles allows us to serve static content such as the HTML, CSS,
-# and JS parts of our frontend straight from this backend server.
 from fastapi.staticfiles import StaticFiles
-
-# Pydantic is a data validation library used by FastAPI. We define BaseModel
-# classes to strictly control and validate the data format coming from clients.
-from pydantic import BaseModel
-
+from pydantic import BaseM
 from backend.ai_enricher import enrich_findings
 from backend.exporter import export_result
 from backend.models import AnalysisResult, FindingGroup, LocationDetail, Severity
@@ -52,16 +31,12 @@ logger = logging.getLogger(__name__)
 
 # ── App setup ─────────────
 
-# We initialize the FastAPI application. This 'app' object acts as the central router 
-# and registry for all incoming HTTP requests, middleware, and endpoint logic.
 app = FastAPI(
     title="API Security Analyzer",
     description="Scan OpenAPI / Swagger specs for common security misconfigurations.",
     version="2.0.0",
 )
 
-# Enabling CORS below. During development, it's very useful to allow all sources ["*"] 
-# but in a production environment, you should strictly limit this to your frontend domains.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -73,17 +48,12 @@ app.add_middleware(
 
 # ── Request Body Models ─────────────
 
-# These Request Body Models use Pydantic to ensure that any data sent to our API 
-# endpoints exactly matches our expected structure. If the data is invalid, 
-# FastAPI automatically returns an error to the user before reaching our code.
-
 class PasteRequest(BaseModel):
     content: str
 
 
 class UrlRequest(BaseModel):
     url: str
-
 
 # ── Shared Pipeline ─────────────
 
@@ -92,13 +62,7 @@ class UrlRequest(BaseModel):
 # scoring, and enriching across the different input methods (Paste, Upload, URL).
 
 def _validation_warnings_group(warnings: list[str]) -> FindingGroup:
-    """
-    Wrap openapi-spec-validator warnings into an INFO-level FindingGroup.
 
-    These are non-fatal — many public API specs have minor deviations from the
-    OpenAPI standard that do not prevent analysis.  Surfacing them as INFO
-    findings lets the user see them without rejecting the request.
-    """
     return FindingGroup(
         rule_id         = "SPEC-VAL",
         rule_name       = "OpenAPI Spec Validation Warnings",
@@ -138,8 +102,6 @@ async def _run_pipeline(raw_text: str, ai: bool = False) -> AnalysisResult:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     # ── 2. Validate (non-fatal) ───────────────────────────────────────────────
-    # openapi-spec-validator is pedantic; surfacing warnings as INFO findings
-    # lets the user see them without rejecting perfectly analysable specs.
     validation_warnings = validate_spec_doc(spec)
     if validation_warnings:
         logger.info(
@@ -183,11 +145,6 @@ async def _run_pipeline(raw_text: str, ai: bool = False) -> AnalysisResult:
 
 
 # ── Endpoints ─────────────
-
-# The API endpoints define the specific URLs that users can interact with. 
-# Each endpoint dictates how it accepts input (e.g. text body, file upload, or URL), 
-# routes it to the shared pipeline, and formats the output.
-
 @app.post(
     "/analyze/paste",
     summary="Analyze pasted spec text",
@@ -272,9 +229,6 @@ async def analyze_url(
 
 
 # ── Health Check ─────────────
-
-# A basic Health Check endpoint allows deployment platforms (like Docker, Kubernetes) 
-# to verify that the application is actively running and ready to handle traffic.
 
 @app.get("/health", tags=["Meta"], summary="Health check")
 async def health() -> dict:
